@@ -81,18 +81,41 @@ class TestStuff(unittest.TestCase):
         while (machine.execute_instruction()):
             pass
         self.assertEqual(machine.io['output'][0],1125899906842624)
+
+    def test_5(self):
+        prog = "109,1,203,11,209,8,204,1,99,10,0,42,0"
+        program = [int(s) for s in prog.split(",")]
+        machine = Machine()
+        machine.memory = program.copy()
+        machine.counter = 0
+        machine.io = {'input': [77], 'output': []}
+        while (machine.execute_instruction()):
+            pass
+        self.assertEqual(machine.io['output'][0],77)
+
+        
                 
 # Steps to increment for each code
 def debug(arg):
-    pass
-    #print(arg)
+    #pass
+    print(arg)
 
 class Machine:
     memory = []
     counter = 0
     base = 0
-    io = {}
+    io = {'input': [], 'output': []}
+    trace = True
 
+    def debug(self,arg):
+        if self.trace:
+            print(arg)
+
+    def dump(self):
+        print(self.memory)
+        print("pc: {}".format(self.counter))
+        print("rb: {}".format(self.base))
+    
     def __init__(self):
         self.memory = []
         self.counter = 0
@@ -112,17 +135,13 @@ class Machine:
 
     # Memory read/write extends memory if necessary
     def read(self,location):
-        debug(self.memory)
         while(location >= len(self.memory)):
               self.memory.append(0)
-        debug(self.memory)
         return self.memory[location]
 
     def write(self,location,val):
-        debug(self.memory)
         while(location >= len(self.memory)):
               self.memory.append(0)
-        debug(self.memory)
         self.memory[location] = val
 
     # Decipher the code and modes
@@ -130,21 +149,27 @@ class Machine:
         instruction = opcode % 100
         parameter_modes = int(opcode / 100)
         modes = []
-        # Operands have no more that two referenceable arguments. 
-        for i in range(0,2):
+        # Operands have no more that two referenceable arguments. Might be more!
+        for i in range(0,3):
             modes.append(parameter_modes % 10)
             parameter_modes = int(parameter_modes / 10)
         return (instruction,modes)
 
     # Get the value given the counter, offset and access mode.
-    def get_parameter(self,offset,mode):
+    def get_parameter(self,offset,mode,write=False):
         val = self.read(self.counter+offset)
         if mode == POSITION:
-            return self.read(val)
+            if write:
+                return val
+            else:
+                return self.read(val)
         elif mode == IMMEDIATE:
             return val
         elif mode == RELATIVE:
-            return self.read(self.base + val)
+            if write:
+                return self.base + val
+            else:
+                return self.read(self.base + val)
     
     # Execute the instruction according to the given state
     # Lot of duplication here. Could be much better!
@@ -160,7 +185,7 @@ class Machine:
         if instruction == ADD or instruction == MULTIPLY or instruction == LESS_THAN or instruction == EQUALS:
             arg1 = self.get_parameter(1,modes[0])
             arg2 = self.get_parameter(2,modes[1])
-            arg3 = self.get_parameter(3,1)
+            arg3 = self.get_parameter(3,modes[2],write=True)
 
             if instruction == ADD:
                 self.write(arg3,arg1 + arg2)
@@ -178,15 +203,18 @@ class Machine:
                     self.write(arg3,0)
 
         if instruction == WRITE:
-            arg1 = self.get_parameter(1,modes[0])
+            # This seems to be an issue.
+            arg1 = self.get_parameter(1,modes[0],write=True)
+            arg2 = self.io['input'][0]
+
             # Take the first input value
-            debug("Writing: {}".format(self.io['input'][0]))
-            self.write(arg1,self.io['input'][0])
+            self.write(arg1,arg2)
             # Pop the stack
             self.io['input'] = self.io['input'][1:]
+            #self.dump()
 
         if instruction == ADJUST:
-            arg1 = self.get_parameter(1,1)
+            arg1 = self.get_parameter(1,modes[0])
             self.base = self.base + arg1
                     
         if instruction == OUTPUT:
@@ -208,6 +236,7 @@ class Machine:
 
         if increment:
             self.counter = self.counter + LANG[instruction]['steps']
+#        self.dump()
         return True
 
 if __name__=='__main__':
