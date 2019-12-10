@@ -15,17 +15,17 @@ EQUALS = 8
 ADJUST = 9
 HALT = 99
 
-# Probably don't need args.
+# Argument counts for operators
 LANG = {
-    ADD: {"steps": 4, "args": 3},
-    MULTIPLY: {"steps": 4, "args": 3},
-    WRITE: {"steps": 2, "args": 1},
-    OUTPUT: {"steps": 2, "args": 1},
-    JUMP_TRUE: {"steps": 3, "args": 2},
-    JUMP_FALSE: {"steps": 3, "args": 2},
-    LESS_THAN: {"steps": 4, "args": 3},
-    EQUALS: {"steps": 4, "args": 3},
-    ADJUST: {"steps": 2, "args": 1},
+    ADD: {"args": 3},
+    MULTIPLY: {"args": 3},
+    WRITE: {"args": 1},
+    OUTPUT: {"args": 1},
+    JUMP_TRUE: {"args": 2},
+    JUMP_FALSE: {"args": 2},
+    LESS_THAN: {"args": 3},
+    EQUALS: {"args": 3},
+    ADJUST: {"args": 1},
     HALT: {}
 }
 
@@ -101,10 +101,15 @@ def debug(arg):
     print(arg)
 
 class Machine:
+    # Memory. Array of ints
     memory = []
+    # Program counter
     counter = 0
+    # Relative base for offsetting some instructions
     base = 0
+    # IO object. 
     io = {'input': [], 'output': []}
+    # Debugging info
     trace = True
 
     def debug(self,arg):
@@ -112,15 +117,16 @@ class Machine:
             print(arg)
 
     def dump(self):
-        print(self.memory)
-        print("pc: {}".format(self.counter))
-        print("rb: {}".format(self.base))
+        self.debug(self.memory)
+        self.debug("pc: {}".format(self.counter))
+        self.debug("rb: {}".format(self.base))
     
     def __init__(self):
         self.memory = []
         self.counter = 0
         self.base = 0
 
+    # Haven't actually used these, just explicit setting. 
     def set_counter(self,c):
         self.counter = c
 
@@ -171,9 +177,10 @@ class Machine:
             else:
                 return self.read(self.base + val)
     
-    # Execute the instruction according to the given state
-    # Lot of duplication here. Could be much better!
-    # Added io object to allow passing of multiple parameters and output
+    # Execute the instruction according to the given state Lot of
+    # duplication here. Could be much better! We should really be able
+    # to do something general that counts arguments, but would also
+    # need tohandle the read/write nature.
     def execute_instruction(self):
         opcode = self.read(self.counter)
 
@@ -203,7 +210,6 @@ class Machine:
                     self.write(arg3,0)
 
         if instruction == WRITE:
-            # This seems to be an issue.
             arg1 = self.get_parameter(1,modes[0],write=True)
             arg2 = self.io['input'][0]
 
@@ -211,7 +217,6 @@ class Machine:
             self.write(arg1,arg2)
             # Pop the stack
             self.io['input'] = self.io['input'][1:]
-            #self.dump()
 
         if instruction == ADJUST:
             arg1 = self.get_parameter(1,modes[0])
@@ -235,8 +240,7 @@ class Machine:
                     increment = False
 
         if increment:
-            self.counter = self.counter + LANG[instruction]['steps']
-#        self.dump()
+            self.counter = self.counter + LANG[instruction]['args'] + 1
         return True
 
 if __name__=='__main__':
