@@ -63,7 +63,7 @@ def calculate(lines):
             if point != potential:
                 x_delta = point[0] - potential[0]
                 y_delta = point[1] - potential[1]
-                angle = math.atan2(y_delta,x_delta)
+                angle = round(math.degrees(round(math.atan2(y_delta,x_delta),3)),2)
                 angles.add(angle)
         if len(angles) > maximum:
             maximum = len(angles)
