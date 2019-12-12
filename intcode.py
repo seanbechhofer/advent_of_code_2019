@@ -101,16 +101,6 @@ def debug(arg):
     print(arg)
 
 class Machine:
-    # Memory. Array of ints
-    memory = []
-    # Program counter
-    counter = 0
-    # Relative base for offsetting some instructions
-    base = 0
-    # IO object. 
-    io = {'input': [], 'output': []}
-    # Debugging info
-    trace = True
 
     def debug(self,arg):
         if self.trace:
@@ -122,9 +112,17 @@ class Machine:
         self.debug("rb: {}".format(self.base))
     
     def __init__(self):
+        # Memory. Array of ints
         self.memory = []
+        # Program counter
         self.counter = 0
+        # Relative base for offsetting some instructions
         self.base = 0
+        # Debugging info
+        self.trace = True
+        # Input/output
+        self.io = {'input': [], 'output': []}
+
 
     # Haven't actually used these, just explicit setting. 
     def set_counter(self,c):
