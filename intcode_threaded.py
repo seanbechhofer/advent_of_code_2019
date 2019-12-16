@@ -114,8 +114,8 @@ class TestStuff(unittest.TestCase):
                 
 # Steps to increment for each code
 def debug(arg):
-    #pass
-    print(arg)
+    pass
+    #print(arg)
 
 class Machine:
 
@@ -225,12 +225,13 @@ class Machine:
                     self.write(arg3,0)
 
         if instruction == WRITE:
-#            debug("Reading...")
+            debug("Reading... {}".format(self))
             arg1 = self.get_parameter(1,modes[0],write=True)
 #            debug(self.io['input'].empty())
 #            debug("Empty")
             arg2 = self.io['input'].get()
             self.io['input'].task_done()
+            debug("Read... {} {}".format(arg2,self))
 
             # Take the first input value
             self.write(arg1,arg2)
@@ -244,7 +245,7 @@ class Machine:
         if instruction == OUTPUT:
             arg1 = self.get_parameter(1,modes[0])
             self.io['output'].put(arg1,block=True)
-#            debug("Output: {}".format(arg1))
+            debug("Output: {} {}".format(arg1,self))
 
         if instruction == JUMP_TRUE or instruction == JUMP_FALSE:
             arg1 = self.get_parameter(1,modes[0])
