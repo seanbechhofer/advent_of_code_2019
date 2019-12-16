@@ -139,6 +139,8 @@ class Machine:
         self.trace = True
         # Input/output
         self.io = {'input': [], 'output': []}
+        # Running
+        self.halted = False
 
 
     # Haven't actually used these, just explicit setting. 
@@ -202,6 +204,7 @@ class Machine:
         increment = True
         (instruction,modes) = self.split_instruction(opcode)
         if instruction == HALT:
+            self.halted = True
             return False
     
         if instruction == ADD or instruction == MULTIPLY or instruction == LESS_THAN or instruction == EQUALS:
