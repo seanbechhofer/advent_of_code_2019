@@ -30,7 +30,8 @@ class ShipMap:
     def __init__(self):
         self.cells = {}
         self.cells[(0,0)] = {
-            'type': EMPTY
+            'type': EMPTY,
+            'distance': None
             }
 
     def mapped(self,point):
@@ -39,10 +40,37 @@ class ShipMap:
     def get_type(self,point):
         return self.cells[point]['type']
 
+    def get_distance(self,point):
+        return self.cells[point]['distance']
+
+    # Assumes point is mapped
+    def set_distance(self,point,distance):
+        self.cells[point]['distance'] = distance
+
     # Assumes point is unmapped
     def set_type(self,point,cell_type):
-        self.cells[point] = {'type': cell_type}
-    
+        self.cells[point] = {
+            'type': cell_type,
+            'distance': None}
+
+    def get_oxygen(self):
+        for point, info in self.cells.items():
+            if info['type'] == OXYGEN:
+                return point
+        return None
+
+    def get_neighbours(self,point):
+#        debug("P: {}".format(point))
+        result = []
+        if self.cells[point]['type'] == WALL:
+            raise Exception("It's a WALL!")
+        for direction in [EAST,NORTH,SOUTH,WEST]:
+            new_point = move_to(point,direction)
+            if self.cells[new_point]['type'] != WALL:
+                result.append(new_point)
+#        debug("N: {}".format(result))
+        return result
+        
     def draw(self):
         points = list(self.cells.keys())
         x_min = np.min([p[0] for p in points])
@@ -66,7 +94,6 @@ class ShipMap:
                     line.append('.')
             print(''.join(line))
 
-        
 # Steps to increment for each code
 def debug(arg):
     #pass
@@ -111,6 +138,53 @@ def forage(machine,ship_map,point):
                 
     return True
 
+MASSIVE = 1000000
+
+def distance(ship_map,distances,ignore,point1,point2):
+#    debug("Distance: {}->{}".format(point1,point2))
+    if ship_map.get_type(point1) == WALL:
+        raise Exception("{} is a WALL!".format(point1))
+    if ship_map.get_type(point2) == WALL:
+        raise Exception("{} is a WALL!".format(point2))
+    # Have we calculated this already?
+    if point1 in distances:
+        if point2 in distances[point1]:
+#            debug("Cached: {}->{}".format(point1,point2))
+            return distances[point1][point2]
+    # Are they adjacent?
+    if point2 in ship_map.get_neighbours(point1):
+        if not point1 in distances:
+            distances[point1] = {}
+        distances[point1][point2] = 1
+        if not point2 in distances:
+            distances[point2] = {}
+        distances[point2][point1] = 1
+#        debug("Neighbour: {}->{}".format(point1,point2))
+        return 1
+    # Something massive
+    minimum = MASSIVE
+    # Split into sub-problems. But only if the neighbour isn't being ignored. if there are no ignorable neighbours
+    for neighbour in ship_map.get_neighbours(point1):
+        if not neighbour in ignore:
+            new_ignore = ignore.copy()
+            new_ignore.add(neighbour)
+            d1 = distance(ship_map,distances,new_ignore,point1,neighbour)
+#            debug("d1: {}".format(d1))
+            d2 = distance(ship_map,distances,new_ignore,neighbour,point2)
+#            debug("d2: {}".format(d2))
+            if d1+d2 < minimum:
+                minimum = d1+d2
+    # If it's a real distance, cache it.
+    if minimum < MASSIVE:
+        if not point1 in distances:
+            distances[point1] = {}
+        distances[point1][point2] = minimum
+        if not point2 in distances:
+            distances[point2] = {}
+        distances[point2][point1] = minimum
+    return minimum
+    
+
 if __name__=='__main__':
 #    unittest.main()
     program = [int(s) for s in INPUT.split(",")]
@@ -126,5 +200,12 @@ if __name__=='__main__':
 
     ship_map = ShipMap()
     ship_map.set_type((0,0),EMPTY)
+    ship_map.set_distance((0,0),0)
     forage(machine,ship_map,(0,0))
     ship_map.draw()
+
+    destination = ship_map.get_oxygen()
+    print(destination)
+    print(distance(ship_map,{},set(),(0,0),(18,-18)))
+#    print(distance(ship_map,{},set(),(0,0),(0,2)))
+#    print(distance(ship_map,{},set(),(0,0),(-1,2)))
