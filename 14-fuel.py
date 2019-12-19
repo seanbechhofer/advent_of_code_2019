@@ -1,5 +1,6 @@
 import sys
 import unittest
+import math
 
 INPUT = """4 ZDGD, 1 HTRQV => 3 VRKNQ
 15 XKZQZ, 1 MWZQ => 4 LHWX
@@ -125,7 +126,13 @@ class RuleElement():
         self.n = n
         self.element = element
 
-    def __str__(self):
+    def merge(self,other):
+        if merge.element == self.element:
+            return RuleElement(other.n + self.n,element)
+        else:
+            raise Exception("Bad Merge: {} {}",format(self,other))
+                            
+    def __repr__(self):
         return "{} {}".format(self.n,self.element)
     
 class Rule():
@@ -133,8 +140,12 @@ class Rule():
         self.head = head
         self.body = body
 
-    def __str__(self):
+    def get_element(self):
+        return self.body.element
+
+    def __repr__(self):
         return "{} => {}".format(", ".join([str(b) for b in self.body]),self.head)
+
 
 class Rules():
     
@@ -150,18 +161,110 @@ class Rules():
                 body.append(RuleElement(int(n),element))
             self.rules.append(Rule(head,body))
 
-    def __str__(self):
+    # Find rules that generate element
+    def find_rules(self,element):
+        return [rule for rule in self.rules if rule.head.element == element]
+    
+    def __repr__(self):
         return "\n".join(["============"] + [str(r) for r in self.rules] + ["============"])
 
+def add_elements(rule_element,spare,needed):
+    if not rule_element.element in needed:
+        needed[rule_element.element] = 0
+    needed[rule_element.element] = needed[rule_element.element] + rule_element.n
+    if rule_element.element in spare:
+        if spare[rule_element.element] >= needed[rule_element.element]:
+            spare[rule_element.element] =  spare[rule_element.element] - needed[rule_element.element]
+            del needed[rule_element.element]
+        else:
+            needed[rule_element.element] = needed[rule_element.element] - spare[rule_element.element]
+            del spare[rule_element.element]
+
+def calculate_ore(needed,spare,rules):
+    # If we only need ORE then we're done.
+    debug("Need {}".format(needed))
+    debug(list(needed.keys()))
+    debug('ORE' in needed)
+    if len(list(needed.keys())) == 1 and 'ORE' in needed:
+        return True
+    # Work through the stuff you need
+    index = 0
+    need_keys = list(needed.keys())
+    debug(need_keys)
+    need = need_keys[index]
+    while need == 'ORE':
+        index = index + 1
+        need = need_keys[index]
+    # Find any rules that might generate what's needed
+    possible_rules = rules.find_rules(need)
+    debug(possible_rules)
+    # Store state in case we need to backtrack
+    old_needed = needed.copy()
+    old_spare = spare.copy()
+
+    for possible_rule in possible_rules:
+        # How many do we need?
+        need_count = needed[need]
+        spare_count = 0
+        if need in spare:
+            spare_count = spare[need]
+        debug("Got {} {}".format(spare_count,need))
+        need_count = need_count - spare_count
+        # How many can we generate?
+        generate_count = possible_rule.head.n
+        multiplier = math.ceil(need_count/generate_count)
+        # Remove the stuff that's generated
+        spare_stuff = (generate_count)*multiplier - need_count
+        debug ("{} spare {}".format(spare_stuff,possible_rule.head.element))
+        if spare_stuff > 0:
+            if not(possible_rule.head.element in spare):
+                spare[possible_rule.head.element] = 0
+            spare[possible_rule.head.element] = spare[possible_rule.head.element] + spare_stuff
+        debug("Spare {}".format(spare))
+        del needed[possible_rule.head.element]
+        # Add the stuff that's needed. 
+        for rule_element in possible_rule.body:
+            for i in range(0,multiplier):
+                add_elements(rule_element,spare,needed)
         
+        # if finished(needed):
+        #     return needed['ORE']
+        # else:
+        result = calculate_ore(needed,spare,rules)
+        if result:
+            return True
+        else:
+            # We didn't get to a solution. Wind back to the state before, and try the next rule
+            needed = old_needed
+            spare = old_spare
+    # We've been through all the rules and no joy.
+    return False
+            
 def debug(arg):
     #pass
     print(arg)
 
 def calculate(spec):
     rules = Rules(spec)
+    needed = {
+        'FUEL': 1
+        }
+    spare = {}
     print(rules)
-    return 0
+    if calculate_ore(needed,spare,rules):
+        return needed['ORE']
+    else:
+        return None
 
 if __name__=='__main__':
-    unittest.main()
+#    unittest.main()
+    rules = Rules(INPUT)
+    needed = {
+        'FUEL': 1
+        }
+    spare = {}
+    print(rules)
+    if calculate_ore(needed,spare,rules):
+        print(needed['ORE'])
+    else:
+        print("Failed")
